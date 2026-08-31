@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дефектная ведомость</title>
+<meta name="description" content="Меряю чужие рабочие системы числами: где утекают заявки, что на самом деле лежит в каталоге, во что обходится ручная работа. Сначала замер, потом смета.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f4ef; --ink:#171613; --ink-2:#4a463f; --ink-3:#7d786e;
+  --line:#ddd8cd; --line-2:#c8c2b4;
+  --accent:#8a4b1e; --accent-soft:#f0e6da;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14130f; --ink:#eae6dd; --ink-2:#b8b2a5; --ink-3:#8b857a;
+    --line:#2e2b25; --line-2:#413d34; --accent:#d09258; --accent-soft:#241d15;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14130f; --ink:#eae6dd; --ink-2:#b8b2a5; --ink-3:#8b857a;
+  --line:#2e2b25; --line-2:#413d34; --accent:#d09258; --accent-soft:#241d15;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:64px 24px 96px}
+h1{font-size:clamp(30px,5.4vw,46px);line-height:1.1;font-weight:600;letter-spacing:-.025em;margin:0 0 20px;text-wrap:balance}
+h2{font-size:21px;font-weight:600;letter-spacing:-.01em;margin:52px 0 14px}
+h3{font-size:17px;font-weight:600;margin:0 0 5px}
+p{margin:0 0 14px;color:var(--ink-2);max-width:65ch}
+p.lead{color:var(--ink);font-size:19px;max-width:58ch;line-height:1.45}
+a{color:var(--accent)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.sig{font-family:var(--mono);font-size:13.5px;color:var(--ink-3);letter-spacing:.02em;margin:0 0 40px}
+
+.tools{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);margin:18px 0 0}
+.tools a{display:block;background:var(--paper);padding:22px 24px;text-decoration:none;color:inherit;transition:background-color .18s cubic-bezier(.16,1,.3,1)}
+.tools a:hover,.tools a:focus-visible{background:var(--accent-soft);outline:none}
+.tools h3{color:var(--ink)}
+.tools p{margin:0;font-size:14.5px;color:var(--ink-3);max-width:58ch}
+
+.proof{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:16px 0}
+.proof a{background:var(--paper);padding:14px 16px;text-decoration:none;color:var(--ink);font-size:14.5px;transition:background-color .18s cubic-bezier(.16,1,.3,1)}
+.proof a:hover,.proof a:focus-visible{background:var(--accent-soft);outline:none}
+.proof a span{display:block;color:var(--ink-3);font-size:13px;margin-top:2px}
+
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:14px 0}
+th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--ink-3);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
+td.num{font-family:var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto}
+
+.plain{border-left:2px solid var(--line-2);padding-left:16px;margin:18px 0}
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Меряю чужие рабочие системы числами</h1>
+<p class="sig">сначала замер, потом смета</p>
+
+<p class="lead">У вас всё работает, но что-то утекает, и никто не знает сколько. Я замеряю сколько. Заявка, которая пришла и умерла где-то по дороге. Каталог, до которого не долистывают. Выгрузка, которую внутри считают нормальной. Интеграция, которая молча перестала доставлять.</p>
+
+<p>Не строю новое с нуля и не рассказываю про искусственный интеллект. Беру то, что у вас уже работает, показываю числами, где течёт, и чиню по одному месту за раз.</p>
+
+<h2>Приборы, которыми можно пользоваться прямо сейчас</h2>
+<p>Бесплатно, без регистрации, без формы заявки. Считают целиком в вашем браузере: ни файл, ни цифры никуда не отправляются. Отключите интернет после загрузки страницы — они продолжат работать.</p>
+
+<div class="tools">
+  <a href="katalog/">
+    <h3>Что на самом деле лежит в вашей выгрузке товаров</h3>
+    <p>Сколько позиций живых, сколько описано на бумаге и сколько на самом деле, есть ли цены и фотографии, какие поля завели и не ведут, сколько внутри мусора. Читает xlsx, csv и тот «xls», внутри которого на самом деле веб-страница.</p>
+  </a>
+  <a href="ruchnaya-rabota/">
+    <h3>Сколько стоит рутина, которую делают руками</h3>
+    <p>Часы в год, деньги в год с учётом взносов и рабочего места, какая доля работы реально снимается программой и за сколько окупится. Если не окупится — так и скажет.</p>
+  </a>
+</div>
+
+<h2>Что я делал</h2>
+<p>Заказчики обезличены до отрасли — договоры этого требуют. Цифры настоящие.</p>
+
+<div class="tablewrap">
+<table>
+<thead><tr><th>Отрасль</th><th>Что сделано</th><th>Числом</th></tr></thead>
+<tbody>
+<tr><td>Дилерский автохолдинг</td><td>Принял чужой прод, свёл ветви, прошёл аудитом и починил</td><td class="num">105 находок<br>344 → 723 теста</td></tr>
+<tr><td>Ювелирный бренд</td><td>Поиск по каталогу по смыслу, на сервере заказчика</td><td class="num">4108 позиций</td></tr>
+<tr><td>Ювелирный ритейл</td><td>Транскрибация звонков с разделением говорящих, в проде</td><td class="num">30 часов молчаливой<br>поломки найдено</td></tr>
+<tr><td>Офис услуг</td><td>Учёт времени и карт задач, выложено на два контура</td><td class="num">неделя<br>60 тестов</td></tr>
+<tr><td>Параллельный импорт авто</td><td>Оценка чужого маркетплейса перед решением «чинить или переписывать»</td><td class="num">280 147 пикселей<br>высота страницы</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Живое, что можно открыть</h2>
+<div class="proof">
+  <a href="https://partxource.com/">partxource.com<span>экспорт автозапчастей, прод</span></a>
+  <a href="https://hyperpartner.ru/">hyperpartner.ru<span>сайт интегратора</span></a>
+  <a href="https://felxmodaso-collab.github.io/shum-fm/">ШУМ.FM<span>интерфейс радио, звук в браузере</span></a>
+  <a href="https://felxmodaso-collab.github.io/ostov-cyclework/">Остов<span>3D-сцена и свет по курсору</span></a>
+  <a href="https://felxmodaso-collab.github.io/online-school-dashboard/">Дашборд<span>недельная отчётность</span></a>
+  <a href="https://felxmodaso-collab.github.io/atmosfera-potolki/">Атмосфера<span>многостраничный сайт услуг</span></a>
+</div>
+
+<h2>Как это устроено по деньгам</h2>
+<div class="plain">
+<p>Замер — бесплатно и с объявленными границами: два часа моего времени, вот что войдёт, вот что нет. По итогу вы получаете документ, а не разговор, и дальше решаете сами.</p>
+<p>Работа — от 30 тысяч за отдельный кусок до 300 тысяч за систему целиком. Первый этап всегда самый узкий: две-три недели, отдельная сдача, чтобы вы посмотрели на результат до того, как вложились дальше.</p>
+<p>После сдачи. Это то, о чём обычно молчат: любая живая система требует содержания — обновления, изменения в смежных сервисах, разбор нестандартных случаев. Считайте примерно пятую часть стоимости разработки в год. Я называю это до начала работ, а не после.</p>
+</div>
+
+<h2>С чем ко мне приходят</h2>
+<p>Теряются заявки. Менеджер забыл перезвонить. Данные в трёх таблицах, надо свести. Сотрудник вручную переносит из почты в учётную систему. Нужен обмен с 1С. Каталог без нормального поиска. Достался чужой код, и непонятно, что с ним. Не можем найти сотрудника — хотим автоматизировать.</p>
+
+<footer>
+<p>Пишите в телеграм: <a href="https://t.me/Enssel">@Enssel</a>. Пришлите ссылку на свой сайт или выгрузку — верну ведомость.</p>
+<p>Формы на этой странице нет намеренно: собирать ваши данные, чтобы поговорить, — плохой первый шаг.</p>
+</footer>
+
+</div>
+</body>
+</html>

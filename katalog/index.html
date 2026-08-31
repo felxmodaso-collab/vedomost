@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка каталога — что на самом деле лежит в вашей выгрузке</title>
+<meta name="description" content="Положите выгрузку товаров и увидите, в каком состоянии каталог на самом деле: где описания только на бумаге, где нет цен, где мусор. Файл не покидает ваш компьютер.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f4ef; --ink:#171613; --ink-2:#4a463f; --ink-3:#7d786e;
+  --line:#ddd8cd; --line-2:#c8c2b4;
+  --accent:#8a4b1e; --accent-soft:#f0e6da;
+  --bad:#9c2f22; --warn:#8a6a12; --ok:#2f5d3a;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14130f; --ink:#eae6dd; --ink-2:#b8b2a5; --ink-3:#8b857a;
+    --line:#2e2b25; --line-2:#413d34;
+    --accent:#d09258; --accent-soft:#241d15;
+    --bad:#e0705f; --warn:#d6ad4a; --ok:#7fb98d;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14130f; --ink:#eae6dd; --ink-2:#b8b2a5; --ink-3:#8b857a;
+  --line:#2e2b25; --line-2:#413d34;
+  --accent:#d09258; --accent-soft:#241d15;
+  --bad:#e0705f; --warn:#d6ad4a; --ok:#7fb98d;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:860px;margin:0 auto;padding:56px 24px 96px}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.12;font-weight:600;letter-spacing:-.02em;margin:0 0 18px}
+h2{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:44px 0 14px}
+h3{font-size:17px;font-weight:600;margin:26px 0 8px}
+p{margin:0 0 14px;color:var(--ink-2);max-width:64ch}
+p.lead{color:var(--ink);font-size:18px;max-width:60ch}
+a{color:var(--accent)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* дропзона */
+#drop{
+  margin:34px 0 8px;border:1px dashed var(--line-2);border-radius:3px;
+  padding:40px 24px;text-align:center;cursor:pointer;background:transparent;
+  transition:border-color .18s cubic-bezier(.16,1,.3,1),background-color .18s cubic-bezier(.16,1,.3,1);
+}
+#drop:hover,#drop.hot{border-color:var(--accent);background:var(--accent-soft)}
+#drop strong{display:block;font-size:18px;font-weight:500;margin-bottom:6px}
+#drop span{color:var(--ink-3);font-size:14px}
+#file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.note{font-size:13.5px;color:var(--ink-3);margin-top:10px}
+
+#status{margin:22px 0;font-family:var(--mono);font-size:14px;color:var(--ink-3)}
+#status.err{color:var(--bad)}
+
+/* отчёт */
+#report{display:none;margin-top:12px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:8px 0 4px}
+.kpi div{background:var(--paper);padding:16px 18px}
+.kpi b{display:block;font-family:var(--mono);font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.kpi small{display:block;color:var(--ink-3);font-size:13px;margin-top:5px}
+
+.find{border-left:2px solid var(--line-2);padding:2px 0 2px 16px;margin:0 0 20px}
+.find.bad{border-left-color:var(--bad)}
+.find.warn{border-left-color:var(--warn)}
+.find.ok{border-left-color:var(--ok)}
+.find h3{margin:0 0 5px}
+.find p{margin:0 0 6px}
+.find .why{font-size:14px;color:var(--ink-3)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--ink-3);font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{position:relative;display:block;height:5px;background:var(--line);margin-top:5px;width:110px;max-width:100%}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);display:block}
+.samples{color:var(--ink-3);font-size:13px}
+
+.verdict{border:1px solid var(--line-2);padding:22px 24px;margin:34px 0 8px}
+.verdict h2{margin:0 0 10px}
+.verdict ul{margin:0;padding-left:20px;color:var(--ink-2)}
+.verdict li{margin-bottom:7px}
+
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0 0}
+button.act{
+  font:inherit;font-size:15px;background:transparent;color:var(--ink);
+  border:1px solid var(--line-2);border-radius:2px;padding:10px 18px;cursor:pointer;
+  transition:border-color .18s cubic-bezier(.16,1,.3,1),color .18s cubic-bezier(.16,1,.3,1);
+}
+button.act:hover{border-color:var(--accent);color:var(--accent)}
+
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:14px}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p style="margin:0 0 26px"><a href="../" style="font-family:var(--mono);font-size:13.5px;color:var(--ink-3);text-decoration:none">← дефектная ведомость</a></p>
+
+<h1>Что на самом деле лежит в вашей выгрузке товаров</h1>
+<p class="lead">Положите файл, который отдаёт вам учётная система или админка сайта. Через несколько секунд увидите, в каком состоянии каталог: сколько позиций описаны только на бумаге, где нет цен и фотографий, какие поля завели и не ведут, сколько внутри мусора.</p>
+
+<div id="drop" tabindex="0" role="button" aria-label="Выбрать файл выгрузки">
+  <strong>Перетащите файл сюда или нажмите</strong>
+  <span>xlsx, xls, csv — включая «xls», внутри которого на самом деле веб-страница</span>
+</div>
+<input type="file" id="file" accept=".xlsx,.xls,.csv,.txt,.htm,.html">
+<p class="note">Файл никуда не отправляется. Разбор идёт целиком в вашем браузере — на сервер не уходит ни строки.</p>
+
+<div id="status"></div>
+
+<div id="report"></div>
+
+<footer>
+  <p id="foot-note">Инструмент вырос из живой работы: разбор каталога на 4108 позиций, где заказчик был уверен, что описания есть примерно у десяти процентов товаров. Ячейки с текстом действительно нашлись — а вот разных текстов среди них оказалось меньше сотни, размноженных на целые коллекции. Проект строился бы на данных, которых нет. Этот разбор занимал вечер; здесь он занимает несколько секунд.</p>
+</footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+var drop=document.getElementById('drop'),
+    input=document.getElementById('file'),
+    statusEl=document.getElementById('status'),
+    reportEl=document.getElementById('report');
+
+drop.addEventListener('click',function(){input.click()});
+drop.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});
+['dragenter','dragover'].forEach(function(t){
+  drop.addEventListener(t,function(e){e.preventDefault();drop.classList.add('hot')});
+});
+['dragleave','drop'].forEach(function(t){
+  drop.addEventListener(t,function(e){e.preventDefault();drop.classList.remove('hot')});
+});
+drop.addEventListener('drop',function(e){
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) handle(e.dataTransfer.files[0]);
+});
+input.addEventListener('change',function(){ if(input.files[0]) handle(input.files[0]) });
+
+function say(msg,isErr){ statusEl.textContent=msg; statusEl.className=isErr?'err':''; }
+
+/* ---------- чтение файла ---------- */
+
+function handle(file){
+  reportEl.style.display='none';
+  say('Читаю «'+file.name+'» ('+fmtBytes(file.size)+')…');
+  var fr=new FileReader();
+  fr.onerror=function(){ say('Не смог прочитать файл. Попробуйте другой.',true) };
+  fr.onload=function(){
+    try{
+      var buf=new Uint8Array(fr.result);
+      var kind=sniff(buf);
+      var rows;
+      if(kind==='html'){ rows=readHtml(buf); }
+      else if(kind==='csv'){ rows=readCsv(buf); }
+      else { rows=readBinary(buf); }
+      if(!rows || rows.length<2){ say('В файле не нашлось таблицы хотя бы с двумя строками.',true); return; }
+      analyse(rows,file.name,kind);
+    }catch(err){
+      say('Разбор сорвался: '+(err && err.message ? err.message : err),true);
+    }
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+function sniff(buf){
+  if(buf[0]===0x50&&buf[1]===0x4b) return 'zip';                       // xlsx
+  if(buf[0]===0xd0&&buf[1]===0xcf&&buf[2]===0x11&&buf[3]===0xe0) return 'xls';
+  var probe=decodeGuess(buf.subarray(0,4096)).toLowerCase();
+  if(probe.indexOf('<html')>=0 || probe.indexOf('<table')>=0 || probe.indexOf('<!doctype html')>=0) return 'html';
+  return 'csv';
+}
+
+function decodeGuess(bytes){
+  var utf=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
+  var bad=(utf.match(/�/g)||[]).length;
+  if(bad>bytes.length/200){
+    try{ return new TextDecoder('windows-1251').decode(bytes) }catch(e){}
+  }
+  return utf;
+}
+
+function readBinary(buf){
+  var wb=XLSX.read(buf,{type:'array'});
+  var ws=wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+}
+
+function readHtml(buf){
+  var text=decodeGuess(buf);
+  var doc=new DOMParser().parseFromString(text,'text/html');
+  var tables=Array.prototype.slice.call(doc.querySelectorAll('table'));
+  if(!tables.length) throw new Error('внутри веб-страницы нет ни одной таблицы');
+  tables.sort(function(a,b){ return b.rows.length-a.rows.length });
+  var t=tables[0], out=[];
+  for(var i=0;i<t.rows.length;i++){
+    var r=t.rows[i],line=[];
+    for(var j=0;j<r.cells.length;j++){
+      line.push((r.cells[j].textContent||'').replace(/\s+/g,' ').trim());
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+function readCsv(buf){
+  var text=decodeGuess(buf).replace(/^﻿/,'');
+  var firstLines=text.split(/\r?\n/).slice(0,20).join('\n');
+  var cands=[';','\t',',','|'];
+  var best=',',bestScore=-1;
+  cands.forEach(function(d){
+    var counts=firstLines.split(/\r?\n/).filter(Boolean).map(function(l){return l.split(d).length});
+    if(!counts.length) return;
+    var avg=counts.reduce(function(a,b){return a+b},0)/counts.length;
+    var spread=Math.max.apply(null,counts)-Math.min.apply(null,counts);
+    var score=avg-spread*2;
+    if(avg>1 && score>bestScore){ bestScore=score; best=d }
+  });
+  return parseDelimited(text,best);
+}
+
+function parseDelimited(text,d){
+  var rows=[],row=[],cell='',q=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++} else q=false }
+      else cell+=c;
+    }else{
+      if(c==='"') q=true;
+      else if(c===d){ row.push(cell); cell='' }
+      else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell='' }
+      else if(c==='\r'){ /* skip */ }
+      else cell+=c;
+    }
+  }
+  if(cell.length||row.length){ row.push(cell); rows.push(row) }
+  return rows;
+}
+
+/* ---------- распознавание смысла колонок ---------- */
+
+var SEMANTIC=[
+  {key:'name',    label:'название',        re:/(наимен|назван|товар|продукт|^name$|title|item)/i},
+  {key:'desc',    label:'описание',        re:/(опис|descr|текст|аннотац|контент)/i},
+  {key:'price',   label:'цена',            re:/(цена|стоим|price|розниц|опт.*цен|cost|сумма)/i},
+  {key:'photo',   label:'фотографии',      re:/(фото|изображ|картин|image|photo|picture|img|медиа)/i},
+  {key:'sku',     label:'артикул',         re:/(артикул|sku|код товара|^код$|vendor.?code|баркод|штрих)/i},
+  {key:'cat',     label:'категория',       re:/(категор|раздел|группа|catalog|category|коллекц|тип товара)/i},
+  {key:'brand',   label:'бренд',           re:/(бренд|производ|марка|brand|vendor|поставщ)/i},
+  {key:'stock',   label:'остатки',         re:/(остат|наличи|кол-?во|количеств|склад|quantity|stock|баланс)/i},
+  {key:'active',  label:'активность',      re:/(активн|статус|опубликов|видим|status|active|published|вкл)/i},
+  {key:'id',      label:'идентификатор',   re:/(^id$|ид$|^guid|уникальн.*номер|external)/i}
+];
+
+var GARBAGE_RE=/^(тест|test|проверка|check|копия|copy|asdf|qwerty|ыыы|ааа|xxx|123123|заглушка|dummy|sample|пример|new item|новый товар|без названия|no ?name|-|\.|_+)$/i;
+var GARBAGE_CONTAINS=/(^копия\s*[—\-–:]|^copy of |прорпо|парпа|тестов|^test\b|\bdummy\b)/i;
+var BAD_DATE_RE=/^(\d{6}|\d{1,2}\.\d{4})$/;
+
+function normHeader(s){ return String(s||'').replace(/\s+/g,' ').trim() }
+
+function pickHeaderRow(rows){
+  var limit=Math.min(rows.length,15),best=0,bestScore=-1;
+  for(var i=0;i<limit;i++){
+    var r=rows[i]||[];
+    var filled=r.filter(function(c){return String(c).trim()!==''}).length;
+    if(filled<2) continue;
+    var uniq=new Set(r.map(function(c){return String(c).trim().toLowerCase()}).filter(Boolean)).size;
+    var numeric=r.filter(function(c){return /^[\d\s.,-]+$/.test(String(c).trim()) && String(c).trim()!==''}).length;
+    var score=filled+uniq-numeric*3-i*0.5;
+    if(score>bestScore){bestScore=score;best=i}
+  }
+  return best;
+}
+
+/* ---------- анализ ---------- */
+
+function analyse(rows,fileName,kind){
+  var hIdx=pickHeaderRow(rows);
+  var headers=(rows[hIdx]||[]).map(normHeader);
+  var body=rows.slice(hIdx+1).filter(function(r){
+    return r && r.some(function(c){return String(c).trim()!==''});
+  });
+
+  var cols=headers.map(function(h,i){
+    var vals=body.map(function(r){ return String((r&&r[i]!=null)?r[i]:'').trim() });
+    var nonEmpty=vals.filter(function(v){return v!==''});
+    var uniq=new Set(nonEmpty);
+    var sem=null;
+    for(var s=0;s<SEMANTIC.length;s++){ if(h && SEMANTIC[s].re.test(h)){ sem=SEMANTIC[s]; break } }
+    /* Мусор ищем осторожно: в колонках идентификаторов и в чисто числовых полях
+       любое совпадение с «похоже на дату» — ложное срабатывание (шестизначный ID
+       неотличим от «122023»). Лучше промолчать, чем обвинить зря. */
+    var numericShare = nonEmpty.length ? nonEmpty.filter(function(v){return /^-?\d+([.,]\d+)?$/.test(v)}).length / nonEmpty.length : 0;
+    var isIdLike = (sem && (sem.key==='id'||sem.key==='sku')) || numericShare > 0.9;
+    var dateHeader = /(дата|срок|период|month|year|date|время)/i.test(h||'');
+    var garbage = isIdLike ? [] : nonEmpty.filter(function(v){
+      if(GARBAGE_RE.test(v)||GARBAGE_CONTAINS.test(v)) return true;
+      return dateHeader && BAD_DATE_RE.test(v);
+    });
+    return {
+      idx:i, header:h||('колонка '+(i+1)), sem:sem,
+      total:body.length, filled:nonEmpty.length,
+      fill: body.length? nonEmpty.length/body.length : 0,
+      unique: uniq.size,
+      uniqRatio: nonEmpty.length? uniq.size/nonEmpty.length : 0,
+      samples: Array.from(uniq).slice(0,3),
+      garbage: garbage.length,
+      formats: detectFormats(nonEmpty)
+    };
+  });
+
+  var by={};
+  cols.forEach(function(c){ if(c.sem && !by[c.sem.key]) by[c.sem.key]=c });
+
+  /* активные vs черновики */
+  var activeCol=by.active, activeCount=null, draftCount=null;
+  if(activeCol){
+    var yes=/^(да|yes|1|true|активн\w*|опубликован\w*|вкл\w*|y|\+)$/i;
+    activeCount=0;
+    body.forEach(function(r){ if(yes.test(String(r[activeCol.idx]||'').trim())) activeCount++ });
+    draftCount=body.length-activeCount;
+    if(activeCount===0){ activeCount=null; draftCount=null }   // не смогли прочитать значения
+  }
+
+  var findings=[];
+
+  /* --- описания: заполненность против уникальности --- */
+  if(!by.desc){
+    findings.push({t:'bad',h:'Описаний в файле нет вовсе',
+      p:'Ни одна колонка не похожа на описание товара. Значит текстов, по которым человек или поиск понимает, что это за вещь, в выгрузке не существует.',
+      why:'Каталог без описаний нельзя ни выложить на маркетплейс, ни научить искать по смыслу: искать будет не по чему.'});
+  } else {
+    var d=by.desc;
+    var realShare=d.total? d.unique/d.total : 0;
+    if(d.filled===0){
+      findings.push({t:'bad',h:'Колонка описания есть, но она пустая',
+        p:'Поле «'+d.header+'» заведено и не заполнено ни разу.',
+        why:'Заведённое и не ведущееся поле — обычная история. Важно, что рассчитывать на него нельзя.'});
+    } else if(d.uniqRatio<0.6){
+      findings.push({t:'bad',h:'Описания есть на бумаге, но не по факту',
+        p:'Поле «'+d.header+'» заполнено у '+pct(d.fill)+' товаров ('+num(d.filled)+' шт.), но уникальных текстов среди них всего '+num(d.unique)+'. Один и тот же текст размножен на группы товаров. Реально описано около '+pct(realShare)+' ассортимента.',
+        why:'Это самая частая иллюзия в каталогах: смотришь на заполненность и думаешь, что описания есть. Поиск по смыслу и карточки на маркетплейсе работают от уникальности, а не от заполненности.'});
+    } else if(d.fill<0.5){
+      findings.push({t:'warn',h:'Описания у меньшинства товаров',
+        p:'Поле «'+d.header+'» заполнено у '+pct(d.fill)+' позиций, тексты в основном разные ('+num(d.unique)+' уникальных).',
+        why:'Работать можно, но большая часть ассортимента останется без текста — это ограничит и поиск, и выгрузку на площадки.'});
+    } else {
+      findings.push({t:'ok',h:'С описаниями всё в порядке',
+        p:'Поле «'+d.header+'» заполнено у '+pct(d.fill)+' товаров, уникальных текстов '+num(d.unique)+' — тексты действительно разные.',
+        why:''});
+    }
+  }
+
+  /* --- цены --- */
+  if(!by.price){
+    findings.push({t:'bad',h:'Цен в выгрузке нет',
+      p:'Ни одна колонка не похожа на цену. Обычно это значит, что цены живут в другой системе и в эту выгрузку просто не попали.',
+      why:'Пока цена не приезжает вместе с товаром, ни витрина, ни маркетплейс, ни расчёт для клиента собраться не могут. Это первый вопрос, который стоит задать тому, кто делал выгрузку.'});
+  } else if(by.price.fill<0.9){
+    findings.push({t:'warn',h:'Цена есть не у всех',
+      p:'Поле «'+by.price.header+'» заполнено у '+pct(by.price.fill)+' позиций.',
+      why:'Товары без цены на витрине выглядят как ошибка и почти всегда выпадают из продажи.'});
+  }
+
+  /* --- фотографии --- */
+  if(!by.photo){
+    findings.push({t:'bad',h:'Фотографий в выгрузке нет',
+      p:'Ни одна колонка не похожа на изображение или ссылку на него.',
+      why:'Каталог без картинок не выкладывается никуда. Если фотографии где-то есть, их придётся связывать с товарами отдельной работой — и это отдельные сроки.'});
+  } else if(by.photo.fill<0.8){
+    findings.push({t:'warn',h:'Фотографии есть не у всех товаров',
+      p:'Поле «'+by.photo.header+'» заполнено у '+pct(by.photo.fill)+' позиций, то есть без картинки остаётся '+num(by.photo.total-by.photo.filled)+' шт.',
+      why:'Товар без фотографии продаётся кратно хуже, а на маркетплейсах обычно просто не проходит модерацию.'});
+  }
+
+  /* --- дубли ---
+     Повторяющееся название само по себе не дефект: у «Кольца» в ювелирном каталоге
+     их сотни, и это нормально. Настоящий дубль — когда совпадают и название, и
+     артикул. Обвинять по одному названию нельзя. */
+  if(by.name){
+    if(by.sku){
+      var seen={},fullDup=0;
+      body.forEach(function(r){
+        var nm=String(r[by.name.idx]||'').trim(), sk=String(r[by.sku.idx]||'').trim();
+        if(!nm || !sk) return;
+        var k=nm+' :: '+sk;
+        if(seen[k]) fullDup++; else seen[k]=1;
+      });
+      if(fullDup>0){
+        findings.push({t:'warn',h:'Есть полные дубли карточек',
+          p:'Строк, где совпадают и название, и артикул: '+num(fullDup)+'.',
+          why:'Это уже не однофамильцы, а один и тот же товар, заведённый дважды. Дубли размывают статистику продаж и при переносе множатся дальше.'});
+      }
+    }
+    if(by.name.unique < by.name.filled*0.35 && by.name.filled>50){
+      findings.push({t:'warn',h:'Названия почти не различают товары',
+        p:'На '+num(by.name.filled)+' позиций приходится всего '+num(by.name.unique)+' разных названий.',
+        why:'Для склада это нормально, для поиска — нет: покупатель, который ищет словами, получит десятки одинаковых строк и не поймёт, чем они отличаются. Различать придётся по характеристикам, а значит их надо привести в порядок.'});
+    }
+  }
+  if(by.sku){
+    var dupSku=by.sku.filled-by.sku.unique;
+    if(dupSku>0){
+      findings.push({t:'bad',h:'Артикул не уникален',
+        p:'Повторяющихся значений в поле «'+by.sku.header+'»: '+num(dupSku)+' шт.'+(by.sku.fill<1?' Плюс у '+num(by.sku.total-by.sku.filled)+' позиций артикула нет вовсе.':''),
+        why:'Артикул — это то, по чему системы узнают товар. Если он повторяется, любая синхронизация со складом, сайтом или маркетплейсом начнёт перезаписывать не те позиции.'});
+    }
+  }
+
+  /* --- мусор --- */
+  var garbageCols=cols.filter(function(c){return c.garbage>0}).sort(function(a,b){return b.garbage-a.garbage});
+  if(garbageCols.length){
+    var totalG=garbageCols.reduce(function(a,c){return a+c.garbage},0);
+    findings.push({t:'warn',h:'В данных есть служебный мусор',
+      p:'Нашлось '+num(totalG)+' значений, похожих на тестовые записи, копии и заглушки. Больше всего в «'+garbageCols[0].header+'» ('+num(garbageCols[0].garbage)+').',
+      why:'Мусор приезжает из времён, когда в системе что-то настраивали. Сам по себе он безобиден, но попадает в выгрузки и всплывает на витрине в самый неудобный момент.'});
+  }
+
+  /* --- заведённые и не ведущиеся поля --- */
+  var deadCols=cols.filter(function(c){return c.filled===0});
+  if(deadCols.length){
+    findings.push({t:'warn',h:'Поля заведены, но не ведутся',
+      p:'Пустых от начала до конца колонок: '+deadCols.length+' — '+deadCols.slice(0,6).map(function(c){return '«'+c.header+'»'}).join(', ')+(deadCols.length>6?' и другие':'')+'.',
+      why:'Такое поле выглядит как имеющееся данные, пока на него не начнёшь опираться. Полезно знать заранее, чтобы не планировать работу вокруг пустоты.'});
+  }
+  var thinCols=cols.filter(function(c){return c.filled>0 && c.fill<0.15});
+  if(thinCols.length){
+    findings.push({t:'warn',h:'Поля заполнены единицами',
+      p:thinCols.slice(0,5).map(function(c){return '«'+c.header+'» — '+pct(c.fill)}).join(', ')+(thinCols.length>5?' и ещё '+(thinCols.length-5):'')+'.',
+      why:'Заполнение ниже пятнадцати процентов означает, что поле фактически не ведётся, даже если формально не пустое.'});
+  }
+
+  /* --- разные форматы в одной колонке --- */
+  var mixed=cols.filter(function(c){return c.formats.length>1 && c.filled>30});
+  if(mixed.length){
+    findings.push({t:'warn',h:'Одни и те же характеристики записаны по-разному',
+      p:mixed.slice(0,3).map(function(c){return '«'+c.header+'» — '+c.formats.join(' и ')}).join('; ')+'.',
+      why:'Обычно это след того, что данные приезжали из двух источников или менялся формат учёта. Разбирать такое приходится двумя разными правилами вместо одного — это отдельная работа, которую лучше заложить заранее, чем обнаружить в середине.'});
+  }
+
+  /* --- черновики --- */
+  if(draftCount!==null && draftCount>0){
+    var draftShare=draftCount/body.length;
+    findings.push({t: draftShare>0.25?'warn':'ok',
+      h:'Часть файла — не живые товары ('+pct(draftShare)+')',
+      p:'Помеченных как активные: '+num(activeCount)+' из '+num(body.length)+'. Остальные '+num(draftCount)+' — черновики, копии или снятые с продажи.',
+      why:'Считать проценты заполненности имеет смысл только по активным. По всему файлу картина всегда выглядит хуже, чем есть.'});
+  }
+
+  render({
+    fileName:fileName, kind:kind, headers:headers, cols:cols, by:by,
+    rowCount:body.length, activeCount:activeCount, draftCount:draftCount,
+    findings:findings
+  });
+}
+
+function detectFormats(vals){
+  if(!vals.length) return [];
+  var sample=vals.slice(0,600), f={};
+  sample.forEach(function(v){
+    if(/\|/.test(v)) f['через вертикальную черту']=1;
+    else if(/^[A-Za-z][A-Za-z\s]*-[\d.]+/.test(v)) f['латиницей через дефис']=1;
+    else if(/^\d{4}-\d{2}-\d{2}/.test(v)) f['дата в виде год-месяц-день']=1;
+    else if(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(v)) f['дата через точку']=1;
+    else if(/^-?\d+([.,]\d+)?$/.test(v)) f['число']=1;
+    else if(/^https?:\/\//i.test(v)) f['ссылка']=1;
+  });
+  var keys=Object.keys(f);
+  return keys.length>1?keys:[];
+}
+
+/* ---------- вывод ---------- */
+
+function num(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ') }
+function pct(x){
+  if(x>0 && x<0.005) return 'меньше 1%';
+  if(x<1 && x>0.995) return 'почти 100%';
+  return Math.round(x*100)+'%';
+}
+function fmtBytes(b){ return b>1048576? (b/1048576).toFixed(1)+' МБ' : Math.round(b/1024)+' КБ' }
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}) }
+
+function render(m){
+  var kindWord = m.kind==='html' ? 'веб-страница под видом таблицы' : (m.kind==='csv'?'текстовая таблица':(m.kind==='zip'?'xlsx':'xls'));
+  var h=[];
+
+  h.push('<h2>Что в файле</h2>');
+  if(m.kind==='html'){
+    h.push('<div class="find warn"><h3>Файл только притворяется таблицей Excel</h3>'+
+      '<p>Внутри лежит обычная веб-страница с таблицей. Расширение говорит одно, содержимое другое.</p>'+
+      '<p class="why">Поэтому Excel и большинство программ разбора на нём спотыкаются, и появляется ощущение, что файл битый. Он не битый, его просто надо читать иначе. Здесь он прочитан.</p></div>');
+  }
+
+  h.push('<div class="kpi">');
+  h.push('<div><b class="mono">'+num(m.rowCount)+'</b><small>строк с товарами</small></div>');
+  if(m.activeCount!==null) h.push('<div><b class="mono">'+num(m.activeCount)+'</b><small>из них активных</small></div>');
+  h.push('<div><b class="mono">'+m.headers.length+'</b><small>колонок</small></div>');
+  var recognised=Object.keys(m.by).length;
+  h.push('<div><b class="mono">'+recognised+'</b><small>полей опознано по смыслу</small></div>');
+  h.push('</div>');
+  h.push('<p class="note">Прочитано как: '+kindWord+'.</p>');
+
+  h.push('<h2>Что нашлось</h2>');
+  if(!m.findings.length){
+    h.push('<p>Ничего тревожного не нашлось — редкий и хороший случай.</p>');
+  }
+  m.findings.forEach(function(f){
+    h.push('<div class="find '+f.t+'"><h3>'+esc(f.h)+'</h3><p>'+esc(f.p)+'</p>'+(f.why?'<p class="why">'+esc(f.why)+'</p>':'')+'</div>');
+  });
+
+  h.push('<h2>Поля по одному</h2>');
+  h.push('<div class="tablewrap"><table><thead><tr>'+
+    '<th>поле</th><th>смысл</th><th>заполнено</th><th>уникальных</th><th>примеры</th>'+
+    '</tr></thead><tbody>');
+  m.cols.forEach(function(c){
+    h.push('<tr>'+
+      '<td>'+esc(c.header)+'</td>'+
+      '<td class="samples">'+(c.sem?esc(c.sem.label):'—')+'</td>'+
+      '<td class="num">'+pct(c.fill)+'<span class="bar"><i style="width:'+Math.round(c.fill*100)+'%"></i></span></td>'+
+      '<td class="num">'+num(c.unique)+'</td>'+
+      '<td class="samples">'+esc(c.samples.map(function(s){return s.length>34?s.slice(0,34)+'…':s}).join(' · ')||'—')+'</td>'+
+      '</tr>');
+  });
+  h.push('</tbody></table></div>');
+
+  /* вердикт */
+  var blockers=[];
+  if(!m.by.price) blockers.push('в выгрузке нет цен');
+  if(!m.by.photo) blockers.push('в выгрузке нет фотографий');
+  if(!m.by.desc) blockers.push('нет описаний');
+  else if(m.by.desc.uniqRatio<0.6) blockers.push('описания есть только на бумаге: уникальных текстов кратно меньше, чем заполненных ячеек');
+  if(m.by.sku && m.by.sku.unique<m.by.sku.filled) blockers.push('артикул не уникален');
+
+  h.push('<div class="verdict"><h2>Вердикт</h2>');
+  if(!blockers.length){
+    h.push('<p>Каталог в рабочем состоянии. На нём можно строить поиск по смыслу, витрину и выгрузку на площадки без предварительной чистки данных.</p>');
+  }else{
+    h.push('<p>Прежде чем строить на этом каталоге поиск, витрину или выгрузку на маркетплейс, придётся закрыть вот это:</p><ul>');
+    blockers.forEach(function(b){ h.push('<li>'+esc(b)+'</li>') });
+    h.push('</ul>');
+    h.push('<p style="margin-top:14px">Ни один из этих пунктов не является приговором — все они чинятся. Важно другое: их видно сейчас, до начала работы, а не на третьей неделе, когда сроки уже названы.</p>');
+  }
+  h.push('</div>');
+
+  h.push('<div class="actions">'+
+    '<button class="act" id="save">Сохранить отчёт</button>'+
+    '<button class="act" id="again">Проверить другой файл</button>'+
+    '</div>');
+
+  reportEl.innerHTML=h.join('');
+  reportEl.style.display='block';
+  say('Готово. Разобрано '+num(m.rowCount)+' строк.');
+
+  document.getElementById('again').addEventListener('click',function(){ input.value=''; input.click() });
+  document.getElementById('save').addEventListener('click',function(){ saveReport(m) });
+  reportEl.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function saveReport(m){
+  var lines=[];
+  lines.push('ПРОВЕРКА КАТАЛОГА');
+  lines.push('Файл: '+m.fileName);
+  lines.push('Строк с товарами: '+m.rowCount+(m.activeCount!==null?(', активных: '+m.activeCount):''));
+  lines.push('Колонок: '+m.headers.length);
+  lines.push('');
+  lines.push('НАЙДЕНО');
+  m.findings.forEach(function(f,i){
+    lines.push((i+1)+'. '+f.h);
+    lines.push('   '+f.p);
+    if(f.why) lines.push('   '+f.why);
+    lines.push('');
+  });
+  lines.push('ПОЛЯ');
+  m.cols.forEach(function(c){
+    lines.push('- '+c.header+' | смысл: '+(c.sem?c.sem.label:'не опознан')+
+      ' | заполнено: '+pct(c.fill)+' | уникальных: '+c.unique);
+  });
+  var blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='проверка-каталога.txt';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove() },1000);
+}
+
+})();
+</script>
+</body>
+</html>

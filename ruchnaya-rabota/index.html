@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сколько стоит ручная работа — счёт по вашим цифрам</title>
+<meta name="description" content="Посчитайте, во сколько обходится рутина, которую сотрудники делают руками, и окупится ли её автоматизация. Считает в браузере, честно показывает случаи, когда автоматизировать не надо.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f4ef; --ink:#171613; --ink-2:#4a463f; --ink-3:#7d786e;
+  --line:#ddd8cd; --line-2:#c8c2b4;
+  --accent:#8a4b1e; --accent-soft:#f0e6da;
+  --bad:#9c2f22; --warn:#8a6a12; --ok:#2f5d3a;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14130f; --ink:#eae6dd; --ink-2:#b8b2a5; --ink-3:#8b857a;
+    --line:#2e2b25; --line-2:#413d34; --accent:#d09258; --accent-soft:#241d15;
+    --bad:#e0705f; --warn:#d6ad4a; --ok:#7fb98d;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14130f; --ink:#eae6dd; --ink-2:#b8b2a5; --ink-3:#8b857a;
+  --line:#2e2b25; --line-2:#413d34; --accent:#d09258; --accent-soft:#241d15;
+  --bad:#e0705f; --warn:#d6ad4a; --ok:#7fb98d;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:56px 24px 96px}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.12;font-weight:600;letter-spacing:-.02em;margin:0 0 18px}
+h2{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:44px 0 14px}
+h3{font-size:17px;font-weight:600;margin:24px 0 8px}
+p{margin:0 0 14px;color:var(--ink-2);max-width:64ch}
+p.lead{color:var(--ink);font-size:18px;max-width:60ch}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.note{font-size:13.5px;color:var(--ink-3)}
+
+form{margin:34px 0 0;border:1px solid var(--line);padding:24px}
+.row{display:grid;grid-template-columns:1fr 150px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.row:last-of-type{border-bottom:0}
+.row label{font-size:15px}
+.row label small{display:block;color:var(--ink-3);font-size:13px;margin-top:2px}
+input[type=number],select{
+  font:inherit;font-family:var(--mono);width:100%;padding:8px 10px;
+  background:transparent;color:var(--ink);border:1px solid var(--line-2);border-radius:2px;
+}
+select{font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.full{grid-column:1 / -1}
+label.check{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;color:var(--ink-2);cursor:pointer;padding-top:12px}
+label.check input{margin-top:3px}
+
+#out{display:none;margin-top:34px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.kpi div{background:var(--paper);padding:16px 18px}
+.kpi b{display:block;font-family:var(--mono);font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.kpi small{display:block;color:var(--ink-3);font-size:13px;margin-top:5px}
+.verdict{border:1px solid var(--line-2);padding:22px 24px;margin:26px 0 0}
+.verdict.stop{border-color:var(--warn)}
+.verdict h3{margin:0 0 8px}
+.calc{font-family:var(--mono);font-size:13.5px;color:var(--ink-3);border-left:2px solid var(--line-2);padding-left:14px;margin:20px 0}
+.calc div{margin-bottom:3px}
+.split{border-left:2px solid var(--line-2);padding-left:16px;margin:20px 0}
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p style="margin:0 0 26px"><a href="../" style="font-family:var(--mono);font-size:13.5px;color:var(--ink-3);text-decoration:none">← дефектная ведомость</a></p>
+
+<h1>Сколько стоит рутина, которую делают руками</h1>
+<p class="lead">Считает по вашим цифрам: сколько часов в год уходит на повторяющуюся работу, во что она обходится с учётом взносов и рабочего места, и окупится ли её автоматизация. Если не окупится — так и скажет.</p>
+
+<form id="f">
+  <div class="row full">
+    <label for="kind">Что за работа
+      <small>от этого зависит, какая её часть вообще поддаётся автоматизации</small>
+    </label>
+    <select id="kind">
+      <option value="transfer">Перенос данных между системами (из почты, таблиц, писем в учётную систему)</option>
+      <option value="entry">Ввод данных с бумаги, сканов, фотографий</option>
+      <option value="reports">Сбор отчётов и сводок из нескольких источников</option>
+      <option value="catalog">Наполнение каталога, карточек товаров, описаний</option>
+      <option value="requests">Обработка однотипных заявок и обращений</option>
+      <option value="answers">Ответы на повторяющиеся вопросы клиентов</option>
+      <option value="check">Проверка и сверка глазами (документы, качество, соответствие)</option>
+      <option value="calls">Звонки и переговоры</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="people">Сколько человек этим занято<small>хотя бы частично</small></label>
+    <input type="number" id="people" value="1" min="1" max="200" step="1">
+  </div>
+  <div class="row">
+    <label for="minutes">Сколько минут в день у каждого<small>грубо, по ощущению — этого достаточно</small></label>
+    <input type="number" id="minutes" value="120" min="1" max="600" step="5">
+  </div>
+  <div class="row">
+    <label for="salary">Зарплата на руки, ₽ в месяц<small>то, что человек получает</small></label>
+    <input type="number" id="salary" value="70000" min="10000" max="1000000" step="5000">
+  </div>
+  <label class="check full"><input type="checkbox" id="msp" checked>
+    <span>Компания в реестре малого и среднего бизнеса — тогда часть взносов идёт по пониженному тарифу</span></label>
+  <label class="check full"><input type="checkbox" id="overhead" checked>
+    <span>Учесть рабочее место, технику, отпуска и больничные — это ещё около 15% сверху</span></label>
+</form>
+
+<div id="out"></div>
+
+<footer>
+  <p>Считает целиком в браузере: ни одна из введённых цифр никуда не отправляется.</p>
+  <p>Потолок, который важно держать в голове: полностью заменить человека умеет очень небольшая часть задач. По оценке Минтруда речь примерно о восьми процентах трудовых функций. Всё остальное — это не «уволить», а «перестать делать руками ту часть, которая повторяется».</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// Доля работы, которую в этом виде рутины реально снимает программа, и что остаётся человеку.
+var KINDS={
+  transfer:{share:[.80,.95],human:"остаётся разбор нетиповых случаев и решение, что делать со спорными записями",
+            build:[60000,180000], weeks:"1–3 недели"},
+  entry:   {share:[.55,.80],human:"распознавание делает машина, но проверять сомнительные места всё равно человек",
+            build:[90000,250000], weeks:"2–5 недель"},
+  reports: {share:[.85,.95],human:"остаётся решить, что именно считать и как это трактовать",
+            build:[50000,150000], weeks:"1–3 недели"},
+  catalog: {share:[.45,.75],human:"структуру и характеристики машина разложит, а смысловые тексты и подбор фото — нет",
+            build:[80000,250000], weeks:"2–5 недель"},
+  requests:{share:[.55,.80],human:"типовое уходит целиком, нестандартное поднимается человеку с уже собранным контекстом",
+            build:[70000,220000], weeks:"2–4 недели"},
+  answers: {share:[.45,.70],human:"частые вопросы закрываются сами, сложные и конфликтные — только человек",
+            build:[60000,200000], weeks:"2–4 недели"},
+  check:   {share:[.25,.50],human:"машина отсеивает явные расхождения и подсвечивает подозрительное, решение остаётся за человеком",
+            build:[90000,260000], weeks:"3–6 недель"},
+  calls:   {share:[.10,.25],human:"автоматизируется подготовка и разбор после разговора, сам разговор — нет",
+            build:[60000,180000], weeks:"2–4 недели"}
+};
+
+var WORK_DAYS=247, HOURS_MONTH=164;
+
+var f=document.getElementById('f'), out=document.getElementById('out');
+f.addEventListener('input',calc);
+f.addEventListener('change',calc);
+
+function num(n){ return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ') }
+function money(n){ return num(n)+' ₽' }
+
+function calc(){
+  var kind=document.getElementById('kind').value;
+  var K=KINDS[kind];
+  var people=Math.max(1,+document.getElementById('people').value||1);
+  var minutes=Math.max(1,+document.getElementById('minutes').value||1);
+  var salary=Math.max(1,+document.getElementById('salary').value||1);
+  var msp=document.getElementById('msp').checked;
+  var overhead=document.getElementById('overhead').checked;
+
+  // от «на руки» к окладу
+  var gross=salary/0.87;
+  // взносы: 30% обычный тариф; для МСП с части сверх МРОТ — 15%, что в среднем даёт около 20%
+  var contribRate = msp ? 0.20 : 0.30;
+  var employerCost=gross*(1+contribRate);
+  if(overhead) employerCost*=1.15;
+  var hourCost=employerCost/HOURS_MONTH;
+
+  var hoursYear=minutes/60*WORK_DAYS*people;
+  var costYear=hoursYear*hourCost;
+
+  var saveLo=costYear*K.share[0], saveHi=costYear*K.share[1];
+  var buildLo=K.build[0], buildHi=K.build[1];
+  // поддержка: примерно пятая часть стоимости разработки в год — это то, о чём обычно молчат
+  var upkeep=(buildLo+buildHi)/2*0.2;
+
+  var netLo=saveLo-upkeep, netHi=saveHi-upkeep;
+  var paybackLo = netHi>0 ? buildLo/netHi*12 : Infinity;
+  var paybackHi = netLo>0 ? buildHi/netLo*12 : Infinity;
+  // Показываем середину, а не оптимистичный край: край честен арифметически,
+  // но читается как обещание, которого никто не давал.
+  var netMid=(netLo+netHi)/2, buildMid=(buildLo+buildHi)/2;
+  var paybackMid = netMid>0 ? buildMid/netMid*12 : Infinity;
+
+  var h=[];
+  h.push('<h2>Что получилось</h2>');
+  h.push('<div class="kpi">'+
+    '<div><b class="mono">'+num(hoursYear)+'</b><small>часов в год на эту работу</small></div>'+
+    '<div><b class="mono">'+num(costYear/1000)+' тыс.</b><small>₽ в год она стоит компании</small></div>'+
+    '<div><b class="mono">'+num(hourCost)+' ₽</b><small>стоит час этого сотрудника</small></div>'+
+    '<div><b class="mono">'+num(hoursYear/8)+'</b><small>человеко-дней в год</small></div>'+
+    '</div>');
+
+  h.push('<div class="calc">'+
+    '<div>зарплата на руки '+money(salary)+' → оклад '+money(gross)+'</div>'+
+    '<div>+ страховые взносы '+Math.round(contribRate*100)+'% '+(msp?'(пониженный тариф для МСП)':'(общий тариф)')+'</div>'+
+    (overhead?'<div>+ рабочее место, техника, отпуска и больничные — 15%</div>':'')+
+    '<div>= '+money(employerCost)+' в месяц ÷ '+HOURS_MONTH+' рабочих часов = '+money(hourCost)+' за час</div>'+
+    '<div>'+minutes+' мин × '+WORK_DAYS+' рабочих дней × '+people+' чел. = '+num(hoursYear)+' часов в год</div>'+
+    '</div>');
+
+  h.push('<h2>Что из этого снимается программой</h2>');
+  h.push('<div class="split"><p>Для такой работы обычно уходит от '+Math.round(K.share[0]*100)+
+    ' до '+Math.round(K.share[1]*100)+' процентов времени — это <b>'+money(saveLo)+' – '+money(saveHi)+
+    '</b> в год.</p><p class="note">Что остаётся людям: '+K.human+'.</p></div>');
+
+  h.push('<div class="split"><p>Сделать такое — ориентировочно <b>'+money(buildLo)+' – '+money(buildHi)+
+    '</b> и '+K.weeks+' работы. Плюс содержание: примерно <b>'+money(upkeep)+
+    '</b> в год — обновления, изменения в смежных системах, разбор нестандартных случаев.</p>'+
+    '<p class="note">Про содержание обычно не говорят на этапе продажи, и это самая частая причина, по которой внедрение потом считают неудачным. Считать надо сразу с ним.</p></div>');
+
+  var verdictClass='', verdict='';
+  if(!isFinite(paybackHi)||netHi<=0){
+    verdictClass=' stop';
+    verdict='<h3>Автоматизировать не надо</h3>'+
+      '<p>Экономия по вашим цифрам меньше, чем стоит содержание такой системы. Она не окупится никогда, сколько ни жди. Тут дешевле оставить как есть — либо сначала нарастить объём, либо перестроить сам процесс, а не автоматизировать его.</p>';
+  } else if(paybackHi>36){
+    verdictClass=' stop';
+    verdict='<h3>Скорее не стоит</h3>'+
+      '<p>Окупаемость выходит за три года. За это время поменяется и процесс, и системы вокруг. Если очень хочется — начинать с самого узкого куска, а не с целого.</p>';
+  } else if(paybackHi>18){
+    verdict='<h3>На грани</h3>'+
+      '<p>Окупаемость около '+Math.round(paybackMid)+' месяцев, при неудачном раскладе — до '+Math.round(paybackHi)+'. Это тот случай, когда решает не арифметика, а то, мешает ли эта рутина расти и держится ли она на одном конкретном человеке.</p>';
+  } else {
+    verdict='<h3>Считается</h3>'+
+      '<p>Окупаемость около <b>'+Math.round(paybackMid)+' месяцев</b>, при неудачном раскладе — до '+Math.round(paybackHi)+'. Дальше это экономия '+money(netLo)+' – '+money(netHi)+' в год.</p>'+
+      '<p class="note">Разумный порядок действий: сначала самый повторяющийся кусок, отдельно, за две-три недели. Он окупается быстрее всего и показывает, врут цифры или нет. Всё остальное — только после этого.</p>';
+  }
+  h.push('<div class="verdict'+verdictClass+'">'+verdict+'</div>');
+
+  h.push('<p class="note" style="margin-top:22px">Все числа выше — порядок величины, а не смета. Доли автоматизации взяты по типовым задачам этого класса, стоимость разработки — по рынку. Ваш случай может отличаться в обе стороны, и узнать это можно только посмотрев на конкретный процесс.</p>');
+
+  out.innerHTML=h.join('');
+  out.style.display='block';
+}
+
+calc();
+})();
+</script>
+</body>
+</html>
